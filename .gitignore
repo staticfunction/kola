@@ -1,0 +1,9 @@
+.idea
+node_modules
+bin-build
+bin-release
+
+src/**/*.js
+src/**/*.js.map
+test/**/*.js
+test/**/*.js.map
