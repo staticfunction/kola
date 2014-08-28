@@ -6,7 +6,11 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": {
+      "name": "James Roland Cabresos",
+      "email": "jamesroland@dwimmyfactory.com",
+      "url": "http://github.com/staticfunction"
+  },
   "license": "ISC",
   "dependencies": {
     "stfu-signals": "0.0.3"
