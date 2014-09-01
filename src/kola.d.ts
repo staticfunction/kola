@@ -2,58 +2,66 @@
 * Created by staticfunction on 8/20/14.
 */
 import signals = require('stfu-signals');
-export interface Factory<T> {
-    getInstance(): T;
+export interface Kolable {
+    onKontext(kontext: Kontext): void;
 }
-export declare class KolaCommand<T> {
-    public execute(payload: T): Error;
-}
-export declare class KolaExecutionChain<T> {
-    public commands: {
-        new(): KolaCommand<T>;
-    }[];
-    public errorCommand: new() => KolaCommand<Error>;
-    public fragile: boolean;
-    constructor(commands: {
-        new(): KolaCommand<T>;
-    }[], errorCommand: new() => KolaCommand<Error>, fragile: boolean);
-    public executeChain(payload: T): KolaExecutionChain<T>;
-}
-export declare class KolaExecutionChainFactory<T> {
-    public commandChain: {
-        new(): KolaCommand<T>;
-    }[];
-    public onErrorCommand: new() => KolaCommand<Error>;
-    public chainBreaksOnError: boolean;
-    constructor(commandChain: {
-        new(): KolaCommand<T>;
-    }[]);
-    public breakChainOnError(value: boolean): KolaExecutionChainFactory<T>;
-    public onError(command: new() => KolaCommand<Error>): KolaExecutionChainFactory<T>;
-    public newExecution(payload: T): KolaExecutionChain<T>;
-}
-export declare class KolaSignal<T> extends signals.SignalDispatcher<T> {
-    public executionChainFactory: KolaExecutionChainFactory<T>;
-    constructor();
-    public onDispatch(payload: T): void;
-    public executes(commands: {
-        new(): KolaCommand<T>;
-    }[]): KolaExecutionChainFactory<T>;
-}
-export declare class KolaContext {
-    public contextId: string;
-    private store;
-    constructor(contextId: string);
-    public getMe(name: string): any;
-    public signal<T>(name: string): KolaSignal<T>;
-    public factory<T>(name: string, clazz: new() => T): KolaFactory<T>;
-}
-export declare class KolaFactory<T> implements Factory<T> {
+export declare class KolableFactory<T extends Kolable> {
+    public kontext: Kontext;
     public generator: new() => T;
     private oneInstance;
-    constructor(generator: new() => T);
+    constructor(kontext: Kontext, generator: new() => T);
     public getInstance(): T;
-    public asSingleton(): KolaFactory<T>;
+    public asSingleton(): KolableFactory<T>;
 }
-export declare function getContext(name: string): KolaContext;
-export declare function createContext(name?: string): KolaContext;
+export declare class Kontext {
+    public name: string;
+    private factories;
+    private signals;
+    private instances;
+    constructor(name: string);
+    public signal<T>(name: string): KolaSignal<T>;
+    public factory(name: string, clazz?: new() => Kolable): KolableFactory<Kolable>;
+    public instance(name: string, instanceObj: any): any;
+}
+export declare class Command<T> implements Kolable {
+    public execute(payload: T): Error;
+    public onKontext(kontext: Kontext): void;
+}
+export interface ExecutionOptions<T> {
+    commands: {
+        new(): Command<T>;
+    }[];
+    errorCommand: new() => Command<Error>;
+    fragile?: boolean;
+}
+export declare class ExecutionChain<T> {
+    public kontext: Kontext;
+    public options: ExecutionOptions<T>;
+    constructor(kontext: Kontext, options: ExecutionOptions<T>);
+    public executeChain(payload: T): ExecutionChain<T>;
+}
+export declare class ExecutionChainFactory<T> implements Kolable {
+    public kontext: Kontext;
+    public commandChain: {
+        new(): Command<T>;
+    }[];
+    public onErrorCommand: new() => Command<Error>;
+    public chainBreaksOnError: boolean;
+    constructor(kontext: Kontext, commandChain: {
+        new(): Command<T>;
+    }[]);
+    public onKontext(kontext: Kontext): void;
+    public breakChainOnError(value: boolean): ExecutionChainFactory<T>;
+    public onError(command: new() => Command<Error>): ExecutionChainFactory<T>;
+    public newExecution(payload: T): ExecutionChain<T>;
+}
+export declare class KolaSignal<T> extends signals.SignalDispatcher<T> {
+    public kontext: Kontext;
+    public executionChainFactory: ExecutionChainFactory<T>;
+    constructor(kontext: Kontext);
+    public onDispatch(payload: T): void;
+    public executes(commands: {
+        new(): Command<T>;
+    }[]): ExecutionChainFactory<T>;
+}
+export declare function createKontext(name: string): Kontext;
