@@ -10,7 +10,7 @@ var BUILD_DIR = "bin-build";
 var RELEASE_DIR = "bin-release";
 
 gulp.task("compile", function() {
-    var stream = gulp.src(['src/kola.ts', 'tsd.d.ts'])
+    var stream = gulp.src(['src/kola.ts', 'typings/tsd.d.ts'])
         .pipe(ts({
             module: "commonjs",
             declaration: true
