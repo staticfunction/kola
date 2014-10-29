@@ -1,6 +1,6 @@
 {
   "name": "kola",
-  "version": "0.0.0-alpha",
+  "version": "0.0.3-alpha",
   "description": "global dependency manager",
   "main": "kola.js",
   "scripts": {
@@ -13,7 +13,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "stfu-signals": "0.0.3"
+    "stfu-signals": "0.0.4"
   },
   "devDependencies": {
     "dts-bundle": "^0.2.0",
