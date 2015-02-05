@@ -200,7 +200,7 @@ export class App<T> {
     parent: App<any>;
     kontext: Kontext;
 
-    constructor(parent: App<any>) {
+    constructor(parent?: App<any>) {
         if(parent) {
             this.kontext = new Kontext(parent.kontext);
         }
@@ -212,15 +212,16 @@ export class App<T> {
     }
 
     onKontext(kontext: Kontext): void {
-        var str: string = kontext.getInstance<string>('tet');
     }
 
-    start(opts: T): void {
+    start(opts: T): App<T> {
         this.kontext.start();
+        return this;
     }
 
-    stop(): void {
+    stop(): App<T> {
         this.kontext.stop();
+        return this;
     }
 }
 
