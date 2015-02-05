@@ -3,148 +3,54 @@
  */
 import signals = require('stfu-signals');
 
-export interface Kolable {
-    onKontext(kontext: Kontext<any>): void;
-}
+export class KontextFactory<T> {
 
-export class KolableFactory<T extends Kolable> {
+    getInstance: () => T;
 
-    kontext: Kontext<any>;
-    generator: {new(): T};
+    private generator: () => T;
+    private singleInstance: T;
 
-    private oneInstance: T;
-
-    constructor(kontext: Kontext<any>, generator:{new() : T}) {
-        this.kontext = kontext;
-        this.generator = generator;
+    constructor(generator: () => T) {
+        this.getInstance = generator;
     }
 
-    getInstance(): T {
-        if(this.oneInstance) {
-            return this.oneInstance;
+    asSingleton(): void {
+        this.getInstance = () => {
+
+            if(!this.singleInstance)
+                this.singleInstance = this.generator();
+
+            return this.singleInstance;
         }
-
-        var instance = new this.generator();
-        instance.onKontext(this.kontext);
-        return instance;
-    }
-
-    asSingleton(): KolableFactory<T> {
-        this.oneInstance = this.getInstance();
-        return this;
     }
 }
 
-export interface Activity<P> {
-    onStart(kontext: Kontext<P>, opts: P): void;
-    onStop(): void;
+export interface Kontext {
+    parent: Kontext;
+    hasSignal(name: string): boolean;
+    signal<T>(name: string): KolaSignal<T>;
+    instance<T>(name: string, factory?: () => T): KontextFactory<T>;
+    start(): void;
+    stop(): void;
 }
 
-export class Kontext<P>  {
-
-    name: string;
-
-    parent: Kontext<any>;
-    children: {[name: string]: Kontext<any>};
-    private activity: {new(): Activity<P>};
-    private activityInstance: Activity<P>;
-    private factories: {[s: string]: KolableFactory<any>};
-    private signals: {[s: string]: KolaSignal<any>};
-    private instances: {[s: string]: any};
-
-    constructor(name: string, activity: {new(): Activity<P>}) {
-        this.name = name;
-        this.activity = activity;
-        this.factories = {};
-        this.signals = {};
-        this.children = {};
-    }
-
-    signal<T>(name: string): KolaSignal<T> {
-        if(this.signals[name]) {
-            return this.signals[name];
-        }
-
-        //if signal is on parent, add a listener to it and make add a new dispatcher as a listener.
-
-        return this.signals[name] = new KolaSignal(this);
-    }
-
-    factory<T extends Kolable>(name: string, clazz?: {new() : T}): KolableFactory<T> {
-        if(this.factories[name])
-            return this.factories[name];
-
-        if(!clazz)
-            throw new Error('no factory defined for: ' + name);
-
-        return this.factories[name] = new KolableFactory(this, clazz);
-    }
-
-    instance(name: string, instanceObj: any): any {
-        if(this.instances[name])
-            return this.instances[name];
-
-        if(!instanceObj)
-            throw new Error('no instance defined for: ' + name);
-
-        this.instances[name] = instanceObj;
-    }
-
-    childKontext<P>(name: string, activity?: {new(): Activity<P>}): Kontext<P> {
-        var kontext: Kontext<P> = this.children[name];
-
-        if(kontext)
-            return kontext;
-
-        if(!activity)
-            throw new Error("When setting a child kontext, activity must be a non-null value");
-
-        kontext = this.children[name] = createKontext(name, activity);
-        kontext.parent = this;
-        return kontext;
-    }
-
-    start(opts: P): Activity<P> {
-        this.activityInstance = new this.activity();
-        this.activityInstance.onStart(this, opts);
-        return this.activityInstance;
-    }
-
-    stop(): void {
-        for(var child in this.children) {
-            this.children[child].stop();
-        }
-
-        if(!this.activityInstance)
-            return;
-
-        this.activityInstance.onStop();
-        this.activityInstance = null;
-    }
-}
-
-export class Command<T> implements Kolable {
-
-    execute(payload: T): Error {
-        return null;
-    }
-
-    onKontext(kontext: Kontext<any>): void {
-    }
+export interface Kommand<T> {
+    new (kontext?: Kontext);
+    execute(payload: T): Error;
 }
 
 export interface ExecutionOptions<T> {
-    commands: {new(): Command<T>}[];
-    errorCommand: {new(): Command<Error>};
+    commands: {new(kontext?: Kontext): Kommand<T>}[];
+    errorCommand: {new(kontext? : Kontext): Kommand<Error>};
     fragile?: boolean;
 }
 
 export class ExecutionChain<T> {
 
-    kontext: Kontext<any>;
+    kontext: Kontext;
     options: ExecutionOptions<T>;
 
-    constructor(kontext: Kontext<any>, options: ExecutionOptions<T>) {
+    constructor(kontext: Kontext, options: ExecutionOptions<T>) {
         this.kontext = kontext;
         this.options = options;
     }
@@ -153,15 +59,13 @@ export class ExecutionChain<T> {
         for(var i = 0; i < this.options.commands.length; i++) {
             var commandClass = this.options.commands[i];
 
-            var commandInstance = new commandClass();
-            commandInstance.onKontext(this.kontext);
+            var commandInstance = new commandClass(this.kontext);
 
             var error = commandInstance.execute(payload);
 
             if(error) {
                 if(this.options.errorCommand) {
-                    var errorCommandInstance = new this.options.errorCommand();
-                    errorCommandInstance.onKontext(this.kontext);
+                    var errorCommandInstance = new this.options.errorCommand(this.kontext);
                     errorCommandInstance.execute(error);
                 }
 
@@ -174,19 +78,19 @@ export class ExecutionChain<T> {
     }
 }
 
-export class ExecutionChainFactory<T> implements Kolable{
+export class ExecutionChainFactory<T> {
 
-    kontext: Kontext<any>;
-    commandChain: {new(): Command<T>}[];
-    onErrorCommand: {new(): Command<Error>};
+    kontext: Kontext;
+    commandChain: {new(kontext?: Kontext): Kommand<T>}[];
+    onErrorCommand: {new(kontext?: Kontext): Kommand<Error>};
     chainBreaksOnError: boolean;
 
-    constructor(kontext: Kontext<any>, commandChain: {new(): Command<T>}[]) {
+    constructor(kontext: Kontext, commandChain: {new(kontext?: Kontext): Kommand<T>}[]) {
         this.kontext = kontext;
         this.commandChain = commandChain;
     }
 
-    onKontext(kontext: Kontext<any>): void {
+    onKontext(kontext: Kontext): void {
         this.kontext = kontext;
     }
 
@@ -195,7 +99,7 @@ export class ExecutionChainFactory<T> implements Kolable{
         return this;
     }
 
-    onError(command: {new(): Command<Error>}): ExecutionChainFactory<T> {
+    onError(command: {new(): Kommand<Error>}): ExecutionChainFactory<T> {
         this.onErrorCommand = command;
         return this;
     }
@@ -211,10 +115,10 @@ export class ExecutionChainFactory<T> implements Kolable{
 
 export class KolaSignal<T> extends signals.SignalDispatcher<T>{
 
-    kontext: Kontext<any>;
+    kontext: Kontext;
     executionChainFactory: ExecutionChainFactory<T>;
 
-    constructor(kontext: Kontext<any>) {
+    constructor(kontext: Kontext) {
         super();
         this.kontext = kontext;
         this.addListener(new signals.SignalListener<T>(this.onDispatch, this));
@@ -225,11 +129,108 @@ export class KolaSignal<T> extends signals.SignalDispatcher<T>{
             this.executionChainFactory.newExecution(payload);
     }
 
-    executes(commands: {new(): Command<T>}[]): ExecutionChainFactory<T> {
+    executes(commands: {new(kontext?: Kontext): Kommand<T>}[]): ExecutionChainFactory<T> {
         return this.executionChainFactory = new ExecutionChainFactory<T>(this.kontext, commands);
     }
 }
 
-export function createKontext<P>(name: string, activity: {new(): Activity<P>}): Kontext<P> {
-    return new Kontext<P>(name, activity);
+export class KontextImpl implements Kontext {
+
+    parent: Kontext;
+    private signals: {[s: string]: KolaSignal<any>};
+    private parentSignalListeners: {[s: string]: signals.SignalListener<any>};
+    private instances: {[s: string]: any};
+
+    constructor(parent?: Kontext) {
+        this.parent = parent;
+        this.signals = {};
+        this.parentSignalListeners = {};
+    }
+
+    hasSignal(name: string): boolean {
+        return this.signals[name] != null;
+    }
+
+    signal<T>(name: string): KolaSignal<T> {
+        if(this.signals[name]) {
+            return this.signals[name];
+        }
+
+        return this.signals[name] = new KolaSignal(this);
+    }
+
+    instance<T>(name: string, factory?: () => T): KontextFactory<T> {
+        var instanz;
+
+        if(this.parent) {
+            instanz = this.instances[name] || this.parent.instance(name);
+        }
+        else
+            instanz = this.instances[name];
+
+        if(instanz)
+            return instanz;
+
+        if(!factory)
+            throw new Error('No instance defined for' + name);
+
+        return this.instances[name] = new KontextFactory(factory);
+    }
+
+
+    start(): void {
+        //start listening to parent signals if signal created has same name to parent kontext's signal
+
+        if(this.parent) {
+            for(var key in this.signals) {
+                var signal = this.signals[key];
+
+                if(this.parent.hasSignal(key)) {
+                    this.parentSignalListeners[key] = new signals.SignalListener(signal.onDispatch, signal);
+                    this.parent.signal(key).addListener(this.parentSignalListeners[key]);
+                }
+            }
+        }
+    }
+
+    stop(): void {
+        //stop listening to parent signals
+        for(var key in this.parentSignalListeners) {
+            this.parent.signal[key].removeListener(this.parentSignalListeners[key]);
+        }
+    }
 }
+
+
+export class App<T> {
+
+    parent: App<any>;
+    kontext: Kontext;
+
+    constructor(parent: App<any>) {
+        if(parent) {
+            this.kontext = new KontextImpl(parent.kontext);
+        }
+        else
+            this.kontext = new KontextImpl();
+
+        this.parent = parent;
+        this.onKontext(this.kontext);
+    }
+
+    onKontext(kontext: Kontext): void {
+
+    }
+
+    start(opts: T): void {
+        this.kontext.start();
+    }
+
+    stop(): void {
+        this.kontext.stop();
+    }
+}
+
+
+
+
