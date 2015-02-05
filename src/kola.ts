@@ -3,37 +3,6 @@
  */
 import signals = require('stfu-signals');
 
-export class KontextFactory<T> {
-
-    getInstance: () => T;
-
-    private generator: () => T;
-    private singleInstance: T;
-
-    constructor(generator: () => T) {
-        this.getInstance = generator;
-    }
-
-    asSingleton(): void {
-        this.getInstance = () => {
-
-            if(!this.singleInstance)
-                this.singleInstance = this.generator();
-
-            return this.singleInstance;
-        }
-    }
-}
-
-export interface Kontext {
-    parent: Kontext;
-    hasSignal(name: string): boolean;
-    signal<T>(name: string): KolaSignal<T>;
-    instance<T>(name: string, factory?: () => T): KontextFactory<T>;
-    start(): void;
-    stop(): void;
-}
-
 export interface Kommand<T> {
     new (kontext?: Kontext);
     execute(payload: T): Error;
@@ -134,7 +103,30 @@ export class KolaSignal<T> extends signals.SignalDispatcher<T>{
     }
 }
 
-export class KontextImpl implements Kontext {
+export class KontextFactory<T> {
+
+    getInstance: () => T;
+
+    private generator: () => T;
+    private singleInstance: T;
+
+    constructor(generator: () => T) {
+        this.getInstance = generator;
+    }
+
+    asSingleton(): void {
+        this.getInstance = () => {
+
+            if(!this.singleInstance)
+                this.singleInstance = this.generator();
+
+            return this.singleInstance;
+        }
+    }
+}
+
+
+export class Kontext {
 
     parent: Kontext;
     private signals: {[s: string]: KolaSignal<any>};
@@ -159,18 +151,19 @@ export class KontextImpl implements Kontext {
         return this.signals[name] = new KolaSignal(this);
     }
 
-    instance<T>(name: string, factory?: () => T): KontextFactory<T> {
+    getInstance<T>(name: string): T {
         var instanz;
 
         if(this.parent) {
-            instanz = this.instances[name] || this.parent.instance(name);
+            instanz = this.instances[name] || this.parent.getInstance(name);
         }
         else
             instanz = this.instances[name];
 
-        if(instanz)
-            return instanz;
+        return instanz;
+    }
 
+    setInstance<T>(name: string, factory: () => T): KontextFactory<T> {
         if(!factory)
             throw new Error('No instance defined for' + name);
 
@@ -209,17 +202,17 @@ export class App<T> {
 
     constructor(parent: App<any>) {
         if(parent) {
-            this.kontext = new KontextImpl(parent.kontext);
+            this.kontext = new Kontext(parent.kontext);
         }
         else
-            this.kontext = new KontextImpl();
+            this.kontext = new Kontext();
 
         this.parent = parent;
         this.onKontext(this.kontext);
     }
 
     onKontext(kontext: Kontext): void {
-
+        var str: string = kontext.getInstance<string>('tet');
     }
 
     start(opts: T): void {
