@@ -61,7 +61,7 @@ export declare class KolaSignal<T> extends signals.SignalDispatcher<T> {
     constructor(kontext: Kontext);
     public onDispatch(payload: T): void;
     public executes(commands: {
-        new(): Command<T>;
+        new(kontext?: Kontext): Command<T>;
     }[]): ExecutionChainFactory<T>;
 }
 export declare function createKontext(name: string): Kontext;
