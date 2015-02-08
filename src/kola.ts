@@ -63,16 +63,12 @@ export class ExecutionChainFactory<T> {
         this.commandChain = commandChain;
     }
 
-    onKontextInterface(kontext: KontextInterface): void {
-        this.kontext = kontext;
-    }
-
     breakChainOnError(value: boolean): ExecutionChainFactory<T> {
         this.chainBreaksOnError = value;
         return this;
     }
 
-    onError(command: {new(): Kommand<Error>}): ExecutionChainFactory<T> {
+    onError(command: {new(kontext?: KontextInterface): Kommand<Error>}): ExecutionChainFactory<T> {
         this.onErrorCommand = command;
         return this;
     }
@@ -116,15 +112,13 @@ export class KontextFactory<T> {
     private singleInstance: T;
 
     constructor(generator: () => T) {
-        this.getInstance = generator;
+        this.generator = this.getInstance = generator;
     }
 
     asSingleton(): void {
         this.getInstance = () => {
-
             if(!this.singleInstance)
                 this.singleInstance = this.generator();
-
             return this.singleInstance;
         }
     }
@@ -149,7 +143,6 @@ export interface KontextInterface {
     stop(): void;
 }
 
-
 export class Kontext implements KontextInterface {
 
     parent: KontextInterface;
@@ -166,6 +159,8 @@ export class Kontext implements KontextInterface {
         this.parentSignalListeners = {};
         this.instances = {};
 
+        //TODO: Make signal() and instance static methods
+
         /**
          * TODO: report this issue
          * Bug? error TS2322: Type '<T>(name: string, factory: () => T) => KontextFactory<T>' is not assignable to type 'Instance'.
@@ -175,7 +170,7 @@ export class Kontext implements KontextInterface {
          */
         this.instance = <T>(name: string, factory?: () => T) => {
             if(!factory)
-                throw new Error('No instance defined for' + name);
+                throw new Error('No instance defined for: ' + name);
 
             return this.instances[name] = new KontextFactory(factory);
         }
@@ -197,24 +192,40 @@ export class Kontext implements KontextInterface {
     }
 
     start(): void {
+        //TODO: Make the methods static
         var sig = (name: string) => {
-            return this.signals[name];
+            var sigInstance;
+
+            if(this.parent) {
+                sigInstance = this.signals[name] || this.parent.signal(name);
+            }
+            else {
+                sigInstance = this.signals[name];
+            }
+
+            if(!sigInstance)
+                throw new Error('No signal defined for: ' + name);
+
+            return sigInstance;
         }
 
         this.signal = <Signal>sig;
 
         //lock instance
-        if(this.parent) {
-            this.instance = <T>(name: string) => {
-                return this.instances[name] || this.parent.instance(name);
+        this.instance = <T>(name: string) => {
+            var factory;
+            if(this.parent) {
+                factory = this.instances[name] || this.parent.instance(name);
             }
-        }
-        else {
-            this.instance = <T>(name: string) => {
-                return this.instances[name];
-            };
-        }
+            else {
+                factory = this.instance[name];
+            }
 
+            if(!factory)
+                throw new Error('No instance defined for: ' + name);
+
+            return factory.getInstance();
+        }
 
         //start listening to parent signals if signal created has same name to parent kontext's signal
         if(this.parent) {
