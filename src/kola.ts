@@ -3,63 +3,104 @@
  */
 import signals = require('stfu-signals');
 
-export class Kommand<T> {
-    constructor (kontext?: KontextInterface) {
-
-    }
-    execute(payload: T): Error {
-        return null;
-    }
+export interface Kommand<T> {
+    (payload: T, kontext?: KontextInterface, done?: (error?: Error) => void): void;
 }
 
 export interface ExecutionOptions<T> {
-    commands: {new(kontext?: KontextInterface): Kommand<T>}[];
-    errorCommand: {new(kontext? : KontextInterface): Kommand<Error>};
+    commands: Kommand<T>[];
+    errorCommand: Kommand<Error>;
     fragile?: boolean;
+    timeout?: number;
+}
+
+export class ExecutionChainTimeout<T> implements Error {
+    kommand: Kommand<T>;
+    name: string;
+    message: string;
+    constructor(kommand: Kommand<T>) {
+        this.name = "ExecutionChainTimeout";
+        this.message = "Execution timeout";
+        this.kommand = kommand;
+    }
 }
 
 export class ExecutionChain<T> {
 
+    payload: T;
     kontext: KontextInterface;
     options: ExecutionOptions<T>;
 
-    constructor(kontext: KontextInterface, options: ExecutionOptions<T>) {
+    private currentIndex: number;
+    private executed: {[n: number]: boolean};
+    private timeoutId: number;
+
+    constructor(payload: T, kontext: KontextInterface, options: ExecutionOptions<T>) {
+        this.payload = payload;
         this.kontext = kontext;
         this.options = options;
+        this.currentIndex = 0;
     }
 
-    executeChain(payload: T): ExecutionChain<T> {
-        for(var i = 0; i < this.options.commands.length; i++) {
-            var commandClass = this.options.commands[i];
-
-            var commandInstance = new commandClass(this.kontext);
-
-            var error = commandInstance.execute(payload);
-
-            if(error) {
-                if(this.options.errorCommand) {
-                    var errorCommandInstance = new this.options.errorCommand(this.kontext);
-                    errorCommandInstance.execute(error);
-                }
-
-                if(this.options.fragile)
-                    break;
-            }
-        }
+    now(): ExecutionChain<T> {
+        this.next();
 
         return this;
     }
+
+    private onDone(index: number, error? : Error): void {
+        //if this index is equal to currentIndex then call next
+        //if not, ignore, but if it has an error, let it call on error
+
+        clearTimeout(this.timeoutId);
+
+        this.next();
+    }
+
+    private next(): void {
+        if(this.executed[this.currentIndex])
+            return;
+
+        if(this.currentIndex < this.options.commands.length) {
+            var command = this.options.commands[this.currentIndex];
+
+            var done: (error?: Error) => void;
+
+            if(command.length > 2) {
+                done = (error?: Error) => {
+                    this.onDone(this.currentIndex, error);
+                }
+
+                command(this.payload, this.kontext, done);
+                //wait for it... but set a timeout
+
+                var onTimeout = () => {
+                    this.onDone(this.currentIndex, new ExecutionChainTimeout(command));
+                }
+
+                this.timeoutId = setTimeout(onTimeout, this.options.timeout);
+            }
+            else {
+                command(this.payload, this.kontext);
+                this.currentIndex++;
+                this.next();
+            }
+
+            this.executed[this.currentIndex] = true;
+        }
+
+
+    }
 }
 
-export class ExecutionChainFactory<T> {
+export class ExecutionChainFactory<T> implements Hook<T>{
 
-    kontext: KontextInterface;
-    commandChain: {new(kontext?: KontextInterface): Kommand<T>}[];
-    onErrorCommand: {new(kontext?: KontextInterface): Kommand<Error>};
+    commandChain: Kommand<T>[];
+    onErrorCommand: Kommand<Error>;
     chainBreaksOnError: boolean;
+    timeoutMs: number;
 
-    constructor(kontext: KontextInterface, commandChain: {new(kontext?: KontextInterface): Kommand<T>}[]) {
-        this.kontext = kontext;
+    constructor(commandChain: Kommand<T>[]) {
         this.commandChain = commandChain;
     }
 
@@ -68,39 +109,23 @@ export class ExecutionChainFactory<T> {
         return this;
     }
 
-    onError(command: {new(kontext?: KontextInterface): Kommand<Error>}): ExecutionChainFactory<T> {
+    onError(command: Kommand<Error>): ExecutionChainFactory<T> {
         this.onErrorCommand = command;
         return this;
     }
 
-    newExecution(payload: T): ExecutionChain<T> {
-        return new ExecutionChain(this.kontext, {
+    timeout(ms: number): ExecutionChainFactory<T> {
+        this.timeoutMs = ms;
+        return this;
+    }
+
+    execute(payload: T, kontext: KontextInterface): ExecutionChain<T> {
+        return new ExecutionChain(payload, kontext, {
             "commands": this.commandChain,
             "errorCommand": this.onErrorCommand,
-            "fragile": this.chainBreaksOnError
-        }).executeChain(payload);
-    }
-}
-
-export class KolaSignal<T> extends signals.SignalDispatcher<T>{
-
-    kontext: KontextInterface;
-    executionChainFactory: ExecutionChainFactory<T>;
-
-    constructor(kontext: KontextInterface) {
-        super();
-        this.kontext = kontext;
-        this.addListener(new signals.SignalListener<T>(this.onDispatch, this));
-    }
-
-    onDispatch(payload: T): void {
-        if(this.executionChainFactory)
-            this.executionChainFactory.newExecution(payload);
-    }
-
-    // in the future make this execution customizable where users can use their own execution factory
-    executes(commands: {new(kontext?: KontextInterface): Kommand<T>}[]): ExecutionChainFactory<T> {
-        return this.executionChainFactory = new ExecutionChainFactory<T>(this.kontext, commands);
+            "fragile": this.chainBreaksOnError,
+            "timeout": this.timeoutMs
+        }).now();
     }
 }
 
@@ -124,21 +149,50 @@ export class KontextFactory<T> {
     }
 }
 
-export interface Instance {
-    <T>(name: string): T;
-    <T>(name: string, factory: () => T): KontextFactory<T>
+export interface Hook<T> {
+    execute(payload: T, kontext: KontextInterface): void;
 }
 
-export interface Signal {
-    <T>(name: string): KolaSignal<T>;
-    <T>(name: string, commandChain: {new(kontext?: KontextInterface): Kommand<T>}[]): ExecutionChainFactory<T>;
+export class SignalHook<T> {
+
+    kontext: KontextInterface;
+    signal: signals.SignalDispatcher<T>;
+    hook: Hook<T>;
+
+    private listener: signals.SignalListener<T>;
+
+    constructor( kontext: KontextInterface, signal: signals.SignalDispatcher<T>, hook: Hook<T>) {
+        this.kontext = kontext;
+        this.signal = signal;
+        this.hook = hook;
+
+        this.listener = new signals.SignalListener(this.onDispatch, this);
+    }
+
+    onDispatch(payload: T): void {
+        this.hook.execute(payload, this.kontext);
+    }
+
+    attach(): void {
+        this.signal.addListener(this.listener);
+    }
+
+    detach(): void {
+        this.signal.removeListener(this.listener);
+    }
+
+    runOnce(): void {
+        this.listener = new signals.SignalListener(this.onDispatch, this, true);
+    }
 }
 
 export interface KontextInterface {
     parent: KontextInterface;
     hasSignal(name: string): boolean;
-    signal: Signal;
-    instance: Instance;
+    setSignal<T>(name: string, hook?: Hook<T>): SignalHook<T>;
+    getSignal<T>(name: string): signals.SignalDispatcher<T>;
+    setInstance<T>(name: string, factory: () => T): KontextFactory<T>;
+    getInstance<T>(name: string): T;
     start(): void;
     stop(): void;
 }
@@ -146,105 +200,49 @@ export interface KontextInterface {
 export class Kontext implements KontextInterface {
 
     parent: KontextInterface;
-    signal: Signal;
-    instance: Instance;
 
-    private signals: {[s: string]: KolaSignal<any>};
-    private parentSignalListeners: {[s: string]: signals.SignalListener<any>};
-    private instances: {[s: string]: any};
+    private signals: {[s: string]: signals.SignalDispatcher<any>};
+    private signalHooks: SignalHook<any>[];
+    private instances: {[s: string]: KontextFactory<any>};
 
     constructor(parent?: KontextInterface) {
         this.parent = parent;
         this.signals = {};
-        this.parentSignalListeners = {};
+        this.signalHooks = [];
         this.instances = {};
-
-        //TODO: Make signal() and instance static methods
-
-        /**
-         * TODO: report this issue
-         * Bug? error TS2322: Type '<T>(name: string, factory: () => T) => KontextFactory<T>' is not assignable to type 'Instance'.
-         * When implementing an interface function where the function has 2 signatures, 1 that accepts
-         * only 1 parameter and the ooher with 2 parameters, you must make the second parameter optional even
-         * if your interface declares it mandatory.
-         */
-        this.instance = <T>(name: string, factory?: () => T) => {
-            if(!factory)
-                throw new Error('No instance defined for: ' + name);
-
-            return this.instances[name] = new KontextFactory(factory);
-        }
-
-        /**
-         * TODO: report this issue
-         * this.signal won't accept the sig if not cast although it implements the same signature.
-         */
-        var sig = <T>(name: string, commandChain?: {new(kontext?: KontextInterface): Kommand<T>}[]) => {
-            var signal = this.signals[name] = new KolaSignal(this);
-            return signal.executes(commandChain);
-        }
-
-        this.signal = <Signal>sig;
     }
 
     hasSignal(name: string): boolean {
         return this.signals[name] != null;
     }
 
-    start(): void {
-        //TODO: Make the methods static
-        var sig = (name: string) => {
-            var sigInstance;
+    setSignal<T>(name: string, hook: Hook<T>): SignalHook<T> {
+        return null;
+    }
 
-            if(this.parent) {
-                sigInstance = this.signals[name] || this.parent.signal(name);
-            }
-            else {
-                sigInstance = this.signals[name];
-            }
+    getSignal<T>(name: string): signals.SignalDispatcher<T> {
+        return null;
+    }
 
-            if(!sigInstance)
-                throw new Error('No signal defined for: ' + name);
+    setInstance<T>(name: string, factory: () => T): KontextFactory<T> {
+        return null;
+    }
 
-            return sigInstance;
-        }
+    getInstance<T>(name: string): T {
+        var factory = this.instances[name];
 
-        this.signal = <Signal>sig;
-
-        //lock instance
-        this.instance = <T>(name: string) => {
-            var factory;
-            if(this.parent) {
-                factory = this.instances[name] || this.parent.instance(name);
-            }
-            else {
-                factory = this.instance[name];
-            }
-
-            if(!factory)
-                throw new Error('No instance defined for: ' + name);
-
+        if(factory)
             return factory.getInstance();
-        }
 
-        //start listening to parent signals if signal created has same name to parent kontext's signal
-        if(this.parent) {
-            for(var key in this.signals) {
-                var signal = this.signals[key];
+        if(this.parent)
+            return this.parent.getInstance<T>(name);
+    }
 
-                if(this.parent.hasSignal(key)) {
-                    this.parentSignalListeners[key] = new signals.SignalListener(signal.onDispatch, signal);
-                    this.parent.signal(key).addListener(this.parentSignalListeners[key]);
-                }
-            }
-        }
+    start(): void {
+
     }
 
     stop(): void {
-        //stop listening to parent signals
-        for(var key in this.parentSignalListeners) {
-            this.parent.signal[key].removeListener(this.parentSignalListeners[key]);
-        }
     }
 }
 
