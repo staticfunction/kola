@@ -49,7 +49,7 @@ describe('App', () => {
     })
 })
 
-interface Kontext extends kola.KontextInterface {
+interface Kontext extends kola.Kontext {
     setSignal<T>(name: string, hook?: kola.Hook<T>): kola.SignalHook<T>;
     getSignal<T>(name: string): signals.SignalDispatcher<T>;
     setInstance<T>(name: string, factory: () => T): kola.KontextFactory<T>;
@@ -88,7 +88,7 @@ class Phonebook {
     }
 }
 
-function AddContact (payload: Contact, kontext: Kontext): void {
+function AddContact (payload: Contact, kontext: Kontext, done: () => void): void {
     var phonebook = kontext.getInstance<Phonebook>('models.phonebook');
     phonebook.addContact(payload);
     console.log('contact added: ' + payload.name)
@@ -156,14 +156,14 @@ function ErrorLog (payload: Error): void {
         console.error(payload.message);
 }
 
-describe('Kontext', () => {
-    var parentKontext: kola.Kontext;
+describe('KontextImpl', () => {
+    var parentKontext: kola.KontextImpl;
     var childKontext: Kontext;
 
     it('create with or without parent', () => {
         should.doesNotThrow(() =>{
-            parentKontext = new kola.Kontext();
-            childKontext = new kola.Kontext(parentKontext);
+            parentKontext = new kola.KontextImpl();
+            childKontext = new kola.KontextImpl(parentKontext);
         }, 'error creating kontext');
     });
 
