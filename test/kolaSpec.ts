@@ -49,19 +49,12 @@ describe('App', () => {
     })
 })
 
-interface KontextSignal extends kola.Signal {
-    <T>(name: string): kola.KolaSignal<T>;
-    (name: 'signals.addContact'): kola.KolaSignal<string>;
-}
-
-interface KontextInstance extends kola.Instance {
-    <T>(name: string): T;
-    (name: 'models.phonebook'): Phonebook;
-}
-
-interface Kontext extends kola.KontextInterface{
-    signal: KontextSignal;
-    instance: KontextInstance;
+interface Kontext extends kola.KontextInterface {
+    setSignal<T>(name: string, hook?: kola.Hook<T>): kola.SignalHook<T>;
+    getSignal<T>(name: string): signals.SignalDispatcher<T>;
+    setInstance<T>(name: string, factory: () => T): kola.KontextFactory<T>;
+    getInstance<T>(name: string): T;
+    getInstance(name: 'models.phonebook'): Phonebook;
 }
 
 class Contact {
@@ -95,60 +88,43 @@ class Phonebook {
     }
 }
 
-class AddContact extends kola.Kommand<Contact> {
+function AddContact (payload: Contact, kontext: Kontext): void {
+    var phonebook = kontext.getInstance<Phonebook>('models.phonebook');
+    phonebook.addContact(payload);
+    console.log('contact added: ' + payload.name)
+}
 
-    phonebook: Phonebook;
-
-    constructor(kontext: Kontext) {
-        super(kontext);
-        this.phonebook = <Phonebook>kontext.instance('models.phonebook');
-    }
-
-    execute(payload: Contact): Error {
-        this.phonebook.addContact(payload);
-        console.log('contact added: ' + payload.name)
-        return null;
+function ContactIsNotNull (payload: Contact): void {
+    if(!payload) {
+        var addContactError: AddContactError = new AddContactError(payload, AddContactErrorReason.ContactIsNull);
+        throw new Error('Contact is null');
     }
 }
 
-class ContactIsNotNull extends kola.Kommand<Contact> {
-    execute(payload: Contact): Error {
-        if(!payload) {
-            var addContactError: AddContactError = new AddContactError(payload, AddContactErrorReason.ContactIsNull);
-            return new Error('Contact is null');
-        }
-        return null;
+function HasPhone(payload: Contact): void {
+    if(!payload.phone)
+        throw new Error('Contact has no phone');
+}
+
+function RemoveContact (payload: Contact, kontext: Kontext): void {
+    var phonebook = kontext.getInstance<Phonebook>('models.phonebook');
+
+    try {
+        phonebook.removeContact(payload);
+    }
+    catch(e) {
+        throw e;
     }
 }
 
-class HasPhone extends kola.Kommand<Contact> {
-    execute(payload: Contact): Error {
-        if(!payload.phone)
-            return new Error('Contact has no phone');
-        return null;
-    }
+function SayHello(payload: string): void {
+        console.log('Hello World!');
 }
 
-class RemoveContact extends kola.Kommand<Contact> {
-
-    phonebook: Phonebook;
-
-    constructor(kontext: Kontext) {
-        super(kontext);
-        this.phonebook = <Phonebook>kontext.instance('models.phonebook');
-    }
-
-    execute(payload: Contact): Error {
-        try {
-            this .phonebook.removeContact(payload);
-        }
-        catch(e) {
-            return e;
-        }
-
-        return null;
-    }
+class Greeting {
+    message = "Hello World";
 }
+
 
 enum AddContactErrorReason {
    ContactIsNull,
@@ -176,11 +152,8 @@ class AddContactError implements Error {
     }
 }
 
-class ErrorLog extends kola.Kommand<Error> {
-    execute(payload: Error): Error {
+function ErrorLog (payload: Error): void {
         console.error(payload.message);
-        return null;
-    }
 }
 
 describe('Kontext', () => {
@@ -196,68 +169,90 @@ describe('Kontext', () => {
 
     it('sets a signal', () => {
         should.doesNotThrow(() => {
-            childKontext.signal<Contact>('signals.contacts.add', [ContactIsNotNull, HasPhone, AddContact])
-            .onError(ErrorLog)
-            .breakChainOnError(true)
+            childKontext.setSignal<Contact>('signals.contacts.add', kola.executes([ContactIsNotNull, HasPhone, AddContact])
+                .onError(ErrorLog)
+                .breakChainOnError(true)
+            );
         }, 'error setting signals.contacts.add');
 
         should.doesNotThrow(() =>{
-            childKontext.signal<Contact>('signals.contacts.remove', [ContactIsNotNull, RemoveContact])
+            childKontext.setSignal<Contact>('signals.contacts.remove', kola.executes([ContactIsNotNull, RemoveContact])
                 .onError(ErrorLog)
-                .breakChainOnError(true);
+                .breakChainOnError(true)
+            );
         }, 'error setting up signals.contacts.remove');
+
+        should.doesNotThrow(() =>{
+            parentKontext.setSignal<string>('signals.hello', kola.executes([SayHello]));
+        }, 'error setting up signals.hello');
     });
 
-    it('sets an instance', () => {
+    it('sets an getInstance', () => {
         should.doesNotThrow( () => {
-            childKontext.instance('models.phonebook', () => {return new Phonebook()}).asSingleton();
+            childKontext.setInstance('models.phonebook', () => {return new Phonebook()}).asSingleton();
         }, 'error setting factory for phonebook');
 
         should.doesNotThrow(() => {
-            childKontext.instance('models.contact', () => {return new Contact()});
+            childKontext.setInstance('models.contact', () => {return new Contact()});
         }, 'error setting factory for contact');
+
+        should.doesNotThrow(() => {
+            parentKontext.setInstance('models.greeting', () => {return new Greeting()}).asSingleton();
+        }, 'error setting factory for greeting');
     })
 
-    it('starts the kontext and locks signal and instance', () => {
+    it('starts the kontext and locks signal and getInstance', () => {
 
         parentKontext.start();
         childKontext.start();
 
-        should.exist(childKontext.signal('signals.contacts.add'));
-        should.exist(childKontext.signal('signals.contacts.remove'));
-        should.throws(() => {
-            childKontext.signal('signals.contacts.edit')
-        }, 'should throw an error since signals.contacts.edit is not defined');
+        should.exist(childKontext.getSignal('signals.contacts.add'));
+        should.exist(childKontext.getSignal('signals.contacts.remove'));
+        should.not.exist(childKontext.getSignal('signals.contacts.edit'));
 
-        var phonebook: Phonebook = <Phonebook>childKontext.instance('models.phonebook');
-        var contact: Contact = <Contact>childKontext.instance('models.contact');
+        var phonebook: Phonebook = <Phonebook>childKontext.getInstance('models.phonebook');
+        var contact: Contact = <Contact>childKontext.getInstance('models.contact');
 
         should.exist(phonebook);
         should.exist(contact);
 
-        should.equal(childKontext.instance('models.phonebook'), phonebook, 'phonebook is not singleton!');
-        should.notEqual(childKontext.instance('models.contact'), contact, 'contact should not be singleton!');
+        should.equal(childKontext.getInstance('models.phonebook'), phonebook, 'phonebook is not singleton!');
+        should.notEqual(childKontext.getInstance('models.contact'), contact, 'contact should not be singleton!');
 
-        should.throws(() => {
-            (childKontext.instance('models.email'));
-        }, 'models.email was not defined')
+        should.not.exist(childKontext.getInstance('models.email'));
     });
 
     it('executes kommands if signal is dispatched', () => {
-        var kommandExecute = sinon.stub(kola.Kommand.prototype, 'execute');
-
         var contact = new Contact();
         contact.name = 'James';
         contact.phone = 1434469;
 
-        childKontext.signal('signals.contacts.add').dispatch(contact);
+        childKontext.getSignal('signals.contacts.add').dispatch(contact);
+
+        //TODO: test for breakChainOnError
 
         //should.ok(kommandExecute.called, 'kommand has not been executed');
         //should.ok(kommandExecute.calledThrice, 'there should only be 3 calls');
     });
 
     it('gets a signal from a parent', () => {
+        var signalListener = sinon.spy();
+        should.equal(childKontext.getSignal('signals.hello'), parentKontext.getSignal('signals.hello'),
+            'child signal and parent signal is not equal');
+    });
 
+    it('gets an getInstance from a parent', () => {
+        should.equal(childKontext.getInstance('models.greeting'), parentKontext.getInstance('models.greeting'),
+        'child models.greeting getInstance is not equal to parent  models.greeting getInstance');
     })
+
+    it('stops the kontext', () => {
+        childKontext.stop();
+    })
+
+    it('child kontext will never receive updates from parent', () => {
+        var signalListener = sinon.spy();
+        childKontext.getSignal('signals.hello').addListener(new signals.SignalListener(signalListener, null, true));
+    });
 
 });
