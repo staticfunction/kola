@@ -265,10 +265,17 @@ export class Kontext implements KontextInterface {
     }
 
     start(): void {
-
+        //start attaching hooks
+        for(var i = 0; i < this.signalHooks.length; i++) {
+            this.signalHooks[i].attach();
+        }
     }
 
     stop(): void {
+        // detach signal hooks
+        for(var i = 0; i < this.signalHooks.length; i++) {
+            this.signalHooks[i].dettach();
+        }
     }
 }
 
