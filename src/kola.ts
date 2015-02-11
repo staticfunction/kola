@@ -31,9 +31,11 @@ export class ExecutionChain<T> {
     kontext: KontextInterface;
     options: ExecutionOptions<T>;
 
+
     private currentIndex: number;
     private executed: {[n: number]: boolean};
     private timeoutId: number;
+    private executeCommand: (index: number, executable: () => void) => void;
 
     constructor(payload: T, kontext: KontextInterface, options: ExecutionOptions<T>) {
         this.payload = payload;
@@ -41,6 +43,23 @@ export class ExecutionChain<T> {
         this.options = options;
         this.currentIndex = 0;
         this.executed = {};
+
+        if(options.errorCommand) {
+            this.executeCommand = (index:number, executable:() => void) => {
+                try {
+                    executable();
+                }
+                catch (e) {
+                    this.onDone(index, e);
+                }
+            }
+        }
+        else {
+            this.executeCommand =(index: number, executable: () => void) => {
+                executable();
+            }
+        }
+
     }
 
     now(): ExecutionChain<T> {
@@ -54,6 +73,12 @@ export class ExecutionChain<T> {
         //if not, ignore, but if it has an error, let it call on error
 
         clearTimeout(this.timeoutId);
+
+        if(error && this.options.errorCommand) {
+            this.options.errorCommand(error, this.kontext);
+            if(this.options.fragile)
+                return;
+        }
 
         this.next();
     }
@@ -72,7 +97,7 @@ export class ExecutionChain<T> {
                     this.onDone(this.currentIndex, error);
                 }
 
-                command(this.payload, this.kontext, done);
+                this.executeCommand(this.currentIndex, () => {command(this.payload, this.kontext, done)});
                 //wait for it... but set a timeout
 
                 var onTimeout = () => {
@@ -82,7 +107,8 @@ export class ExecutionChain<T> {
                 this.timeoutId = setTimeout(onTimeout, this.options.timeout);
             }
             else {
-                command(this.payload, this.kontext);
+                ;
+                this.executeCommand(this.currentIndex, () => {command(this.payload, this.kontext)})
                 this.currentIndex++;
                 this.next();
             }
