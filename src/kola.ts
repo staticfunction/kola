@@ -40,6 +40,7 @@ export class ExecutionChain<T> {
         this.kontext = kontext;
         this.options = options;
         this.currentIndex = 0;
+        this.executed = {};
     }
 
     now(): ExecutionChain<T> {
