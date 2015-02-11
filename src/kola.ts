@@ -96,10 +96,10 @@ export class ExecutionChain<T> {
 
 export class ExecutionChainFactory<T> implements Hook<T>{
 
-    commandChain: Kommand<T>[];
-    onErrorCommand: Kommand<Error>;
-    chainBreaksOnError: boolean;
-    timeoutMs: number;
+    private commandChain: Kommand<T>[];
+    private onErrorCommand: Kommand<Error>;
+    private chainBreaksOnError: boolean;
+    private timeoutMs: number;
 
     constructor(commandChain: Kommand<T>[]) {
         this.commandChain = commandChain;
