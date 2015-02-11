@@ -4,7 +4,7 @@
 import signals = require('stfu-signals');
 
 export interface Kommand<T> {
-    (payload: T, kontext?: KontextInterface, done?: (error?: Error) => void): void;
+    (payload: T, kontext?: Kontext, done?: (error?: Error) => void): void;
 }
 
 export interface ExecutionOptions<T> {
@@ -28,16 +28,15 @@ export class ExecutionChainTimeout<T> implements Error {
 export class ExecutionChain<T> {
 
     payload: T;
-    kontext: KontextInterface;
+    kontext: Kontext;
     options: ExecutionOptions<T>;
-
 
     private currentIndex: number;
     private executed: {[n: number]: boolean};
     private timeoutId: number;
     private executeCommand: (index: number, executable: () => void) => void;
 
-    constructor(payload: T, kontext: KontextInterface, options: ExecutionOptions<T>) {
+    constructor(payload: T, kontext: Kontext, options: ExecutionOptions<T>) {
         this.payload = payload;
         this.kontext = kontext;
         this.options = options;
@@ -146,7 +145,7 @@ export class ExecutionChainFactory<T> implements Hook<T>{
         return this;
     }
 
-    execute(payload: T, kontext: KontextInterface): ExecutionChain<T> {
+    execute(payload: T, kontext: Kontext): ExecutionChain<T> {
         return new ExecutionChain(payload, kontext, {
             "commands": this.commandChain,
             "errorCommand": this.onErrorCommand,
@@ -181,18 +180,18 @@ export class KontextFactory<T> {
 }
 
 export interface Hook<T> {
-    execute(payload: T, kontext: KontextInterface): void;
+    execute(payload: T, kontext: Kontext): void;
 }
 
 export class SignalHook<T> {
 
-    kontext: KontextInterface;
+    kontext: Kontext;
     signal: signals.SignalDispatcher<T>;
     hook: Hook<T>;
 
     private listener: signals.SignalListener<T>;
 
-    constructor( kontext: KontextInterface, signal: signals.SignalDispatcher<T>, hook: Hook<T>) {
+    constructor( kontext: Kontext, signal: signals.SignalDispatcher<T>, hook: Hook<T>) {
         this.kontext = kontext;
         this.signal = signal;
         this.hook = hook;
@@ -217,8 +216,8 @@ export class SignalHook<T> {
     }
 }
 
-export interface KontextInterface {
-    parent: KontextInterface;
+export interface Kontext {
+    parent: Kontext;
     hasSignal(name: string): boolean;
     setSignal<T>(name: string, hook?: Hook<T>): SignalHook<T>;
     getSignal<T>(name: string): signals.SignalDispatcher<T>;
@@ -228,15 +227,15 @@ export interface KontextInterface {
     stop(): void;
 }
 
-export class Kontext implements KontextInterface {
+export class KontextImpl implements Kontext {
 
-    parent: KontextInterface;
+    parent: Kontext;
 
     private signals: {[s: string]: signals.SignalDispatcher<any>};
     private signalHooks: SignalHook<any>[];
     private instances: {[s: string]: KontextFactory<any>};
 
-    constructor(parent?: KontextInterface) {
+    constructor(parent?: Kontext) {
         this.parent = parent;
         this.signals = {};
         this.signalHooks = [];
@@ -309,16 +308,16 @@ export class Kontext implements KontextInterface {
 export class App<T> {
 
     parent: App<any>;
-    kontext: KontextInterface;
+    kontext: Kontext;
     onStart: signals.SignalDispatcher<T>;
     onStop: signals.SignalDispatcher<{}>;
 
     constructor(parent?: App<any>) {
         if(parent) {
-            this.kontext = new Kontext(parent.kontext);
+            this.kontext = new KontextImpl(parent.kontext);
         }
         else
-            this.kontext = new Kontext();
+            this.kontext = new KontextImpl();
 
         this.parent = parent;
         this.onKontext(this.kontext);
@@ -326,7 +325,7 @@ export class App<T> {
         this.onStop = new signals.SignalDispatcher();
     }
 
-    onKontext(kontext: KontextInterface): void {
+    onKontext(kontext: Kontext): void {
     }
 
     start(opts: T): App<T> {
