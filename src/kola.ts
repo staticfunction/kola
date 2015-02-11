@@ -130,6 +130,10 @@ export class ExecutionChainFactory<T> implements Hook<T>{
     }
 }
 
+export function executes<T>(kommand: Kommand<T>[]) {
+    return new ExecutionChainFactory(kommand);
+}
+
 export class KontextFactory<T> {
 
     getInstance: () => T;
@@ -178,7 +182,7 @@ export class SignalHook<T> {
         this.signal.addListener(this.listener);
     }
 
-    detach(): void {
+    dettach(): void {
         this.signal.removeListener(this.listener);
     }
 
