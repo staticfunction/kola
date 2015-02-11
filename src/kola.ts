@@ -221,16 +221,37 @@ export class Kontext implements KontextInterface {
         return this.signals[name] != null;
     }
 
-    setSignal<T>(name: string, hook: Hook<T>): SignalHook<T> {
-        return null;
+    setSignal<T>(name: string, hook?: Hook<T>): SignalHook<T> {
+        var signal = this.getSignal<T>(name);
+
+        if(!signal)
+            signal = this.signals[name] = new signals.SignalDispatcher();
+
+        var sigHook;
+
+        if(hook) {
+            sigHook = new SignalHook(this, signal, hook);
+            this.signalHooks.push(sigHook);
+        }
+
+        return sigHook;
     }
 
     getSignal<T>(name: string): signals.SignalDispatcher<T> {
-        return null;
+        var signal = this.signals[name];
+
+        if(this.parent && !signal) {
+            signal = this.parent.getSignal(name);
+        }
+
+        return signal;
     }
 
     setInstance<T>(name: string, factory: () => T): KontextFactory<T> {
-        return null;
+        if(!factory)
+            throw new Error('error trying to define instance: ' + name);
+
+        return this.instances[name] = new KontextFactory(factory);
     }
 
     getInstance<T>(name: string): T {
