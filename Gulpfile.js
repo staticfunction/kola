@@ -9,6 +9,8 @@ var mocha = require('gulp-mocha');
 var BUILD_DIR = "bin-build";
 var RELEASE_DIR = "bin-release";
 
+//TODO: automate release to commonjs, amd and umd
+
 gulp.task("compile", function() {
     var stream = gulp.src(['src/kola.ts', 'typings/tsd.d.ts'])
         .pipe(ts({

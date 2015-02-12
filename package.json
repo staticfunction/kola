@@ -1,8 +1,8 @@
 {
   "name": "kola",
-  "version": "0.1.0",
+  "version": "0.1.0-rc1",
   "description": "global dependency manager",
-  "main": "kola.js",
+  "main": "dist/kola.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -16,6 +16,7 @@
     "kola-signals": "0.0.1"
   },
   "devDependencies": {
+    "kola-hooks": "0.0.1",
     "dts-bundle": "^0.2.0",
     "gulp": "^3.8.6",
     "gulp-mocha": "^0.5.1",
