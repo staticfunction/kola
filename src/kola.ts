@@ -1,7 +1,7 @@
 /**
  * Created by staticfunction on 8/20/14.
  */
-import signals = require('stfu-signals');
+import signals = require('kola-signals');
 
 export interface Kommand<T> {
     (payload: T, kontext?: Kontext, done?: (error?: Error) => void): void;
