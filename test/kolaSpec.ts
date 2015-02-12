@@ -6,6 +6,7 @@ import kola = require('../src/kola');
 import sinon = require('sinon');
 
 import signals = require('kola-signals');
+import hooks = require('kola-hooks');
 
 describe('App', () => {
 
@@ -167,23 +168,25 @@ describe('KontextImpl', () => {
         }, 'error creating kontext');
     });
 
+
+    //TODO: Move hooks test to kola-hooks
     it('sets a signal', () => {
         should.doesNotThrow(() => {
-            childKontext.setSignal<Contact>('signals.contacts.add', kola.executes([ContactIsNotNull, HasPhone, AddContact])
+            childKontext.setSignal<Contact>('signals.contacts.add', hooks.executes([ContactIsNotNull, HasPhone, AddContact])
                 .onError(ErrorLog)
                 .breakChainOnError(true)
             );
         }, 'error setting signals.contacts.add');
 
         should.doesNotThrow(() =>{
-            childKontext.setSignal<Contact>('signals.contacts.remove', kola.executes([ContactIsNotNull, RemoveContact])
+            childKontext.setSignal<Contact>('signals.contacts.remove', hooks.executes([ContactIsNotNull, RemoveContact])
                 .onError(ErrorLog)
                 .breakChainOnError(true)
             );
         }, 'error setting up signals.contacts.remove');
 
         should.doesNotThrow(() =>{
-            parentKontext.setSignal<string>('signals.hello', kola.executes([SayHello]));
+            parentKontext.setSignal<string>('signals.hello', hooks.executes([SayHello]));
         }, 'error setting up signals.hello');
     });
 
