@@ -1,3 +1,4 @@
 .idea
-**/*.ts
-**/*.js.map
+src
+typings
+test
