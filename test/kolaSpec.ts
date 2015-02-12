@@ -5,7 +5,7 @@ import should = require('should');
 import kola = require('../src/kola');
 import sinon = require('sinon');
 
-import signals = require('stfu-signals');
+import signals = require('kola-signals');
 
 describe('App', () => {
 
