@@ -148,39 +148,44 @@ export class KontextImpl implements Kontext {
     }
 }
 
-
 export class App<T> {
 
     parent: App<any>;
     kontext: Kontext;
-    onStart: signals.SignalDispatcher<T>;
-    onStop: signals.SignalDispatcher<{}>;
+    startupOptions: T;
 
     constructor(parent?: App<any>) {
-        if(parent) {
-            this.kontext = new KontextImpl(parent.kontext);
+        this.parent = parent;
+
+        if(this.parent) {
+            this.kontext = new KontextImpl(this.parent.kontext);
         }
         else
             this.kontext = new KontextImpl();
-
-        this.parent = parent;
-        this.onKontext(this.kontext);
-        this.onStart = new signals.SignalDispatcher();
-        this.onStop = new signals.SignalDispatcher();
     }
 
-    onKontext(kontext: Kontext): void {
+    onKontext(kontext: Kontext, opts?: T): void {
     }
 
-    start(opts: T): App<T> {
+    start(opts?: T): App<T> {
+        this.startupOptions = opts;
+        this.onKontext(this.kontext, opts);
         this.kontext.start();
-        this.onStart.dispatch(opts);
+        this.onStart();
         return this;
+    }
+
+    onStart(): void {
+
+    }
+
+    onStop(): void {
+
     }
 
     stop(): App<T> {
         this.kontext.stop();
-        this.onStop.dispatch(null);
+        this.onStop();
         return this;
     }
 }
