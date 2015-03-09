@@ -15,8 +15,8 @@ describe('App', () => {
 
     it('initialize App with or without parameter', () => {
         should.doesNotThrow(() => {
-            parentApp = new kola.App();
-            childApp = new kola.App(parentApp);
+            parentApp = new kola.App<number>();
+            childApp = new kola.App<string>(parentApp);
         }, 'should not throw an error');
 
     });
@@ -31,17 +31,14 @@ describe('App', () => {
     });
 
     it('signals start and stop, and kontext starts or stops', () => {
-        var onStart = sinon.spy();
-        var onStop = sinon.spy();
+        var onStart = sinon.spy(childApp, 'onStart');
+        var onStop = sinon.spy(childApp, 'onStop');
 
         var kontextStart = sinon.spy(childApp.kontext, 'start');
         var kontextStop = sinon.spy(childApp.kontext, 'stop');
 
-        childApp.onStart.addListener(new signals.SignalListener(onStart));
-        childApp.onStop.addListener(new signals.SignalListener(onStop));
-
         childApp.start('hello');
-        should.ok(onStart.calledWith('hello'), 'onStart listener not called');
+        should.ok(onStart.called, 'onStart listener not called');
         should.ok(kontextStart.called, 'kontext.start not called');
 
         childApp.stop();
