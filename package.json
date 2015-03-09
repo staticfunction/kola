@@ -1,6 +1,6 @@
 {
   "name": "kola",
-  "version": "0.1.0-rc1",
+  "version": "0.1.0-rc2",
   "description": "global dependency manager",
   "main": "dist/kola.js",
   "scripts": {
