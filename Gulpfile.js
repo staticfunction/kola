@@ -12,7 +12,7 @@ var RELEASE_DIR = "bin-release";
 //TODO: automate release to commonjs, amd and umd
 
 gulp.task("compile", function() {
-    var stream = gulp.src(['src/kola.ts', 'typings/tsd.d.ts'])
+    var stream = gulp.src(['src/kola.ts', 'test/**Spec.ts' ,'typings/tsd.d.ts'])
         .pipe(ts({
             module: "commonjs",
             declaration: true
@@ -22,7 +22,7 @@ gulp.task("compile", function() {
     return stream;
 });
 
-gulp.task('test', function() {
+gulp.task('test', ['compile'], function() {
     return gulp.src('test/**/*.js', {read: false})
         .pipe(mocha({reporter: 'nyan'}));
 });
