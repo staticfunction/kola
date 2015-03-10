@@ -10,42 +10,42 @@ var insert = require('gulp-insert');
 var pkg = require('./package.json');
 var del = require('del');
 var merge = require('merge2');
+var filter = require('gulp-filter');
 
-var BUILD_DIR = "bin-build";
+var tsProject = ts.createProject({
+    declarationFiles: false,
+    module: 'commonjs'
+})
 
-//TODO: automate release to commonjs, amd and umd
+var srcOutOnly = filter(['*', '!**Spec.*']);
+var testOutOnly = filter(['**Spec.*']);
 
-gulp.task("compile", function() {
-    var stream = gulp.src(['src/kola.ts','typings/tsd.d.ts'])
-        .pipe(ts({
-            module: "commonjs",
-            declaration: true
-        }))
-        .pipe(gulp.dest(BUILD_DIR));
+gulp.task("compile", ['clean'], function() {
+    var commonjs = gulp.src(['src/kola.ts', 'test/**Spec.ts', 'typings/tsd.d.ts'])
+                        .pipe(ts(tsProject));
 
-    return stream;
+    return commonjs.js
+        .pipe(srcOutOnly)
+        .pipe(gulp.dest('build/src'))
+        .pipe(srcOutOnly.restore())
+        .pipe(testOutOnly)
+        .pipe(gulp.dest('build/test'))
 });
 
 gulp.task('test', ['compile'], function() {
-    return gulp.src('test/**/*.js', {read: false})
+    return gulp.src('build/test/**/*.js', {read: false})
         .pipe(mocha({reporter: 'nyan'}));
 });
 
-gulp.task('bundle', function(cb) {
-    dts.bundle({
-        name: "kola",
-        main: BUILD_DIR + '/kola.d.ts',
-        out:  'kola.d.ts'
-    });
-
-    cb();
+gulp.task('clean', function(cb) {
+    del(['build'], cb);
 })
 
-gulp.task('clean', function(cb) {
+gulp.task('clean-release', function(cb) {
     del(['dist'], cb);
 })
 
-gulp.task('release', ['clean'], function() {
+gulp.task('release', ['clean-release'], function() {
 
     var commonjs = gulp.src(['src/kola.ts', 'typings/tsd.d.ts'])
                     .pipe(ts({
