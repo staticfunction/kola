@@ -1,4 +1,5 @@
 .idea
 src
 typings
+build
 test
