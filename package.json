@@ -13,7 +13,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "kola-signals": "0.0.1"
+    "kola-signals": ">=0.0.1"
   },
   "devDependencies": {
     "del": "^1.1.1",
