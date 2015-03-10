@@ -3,14 +3,15 @@
  */
 var gulp = require('gulp');
 var dts = require('dts-bundle');
-var ts = require('gulp-tsc');
+var ts = require('gulp-typescript');
 var mocha = require('gulp-mocha');
 var replace = require('gulp-replace');
 var insert = require('gulp-insert');
 var pkg = require('./package.json');
+var del = require('del');
+var merge = require('merge2');
 
 var BUILD_DIR = "bin-build";
-var RELEASE_DIR = "bin-release";
 
 //TODO: automate release to commonjs, amd and umd
 
@@ -40,30 +41,33 @@ gulp.task('bundle', function(cb) {
     cb();
 })
 
+gulp.task('clean', function(cb) {
+    del(['dist'], cb);
+})
 
-gulp.task('release', function() {
+gulp.task('release', ['clean'], function() {
 
-    var commonjs = gulp.src('src/kola.ts')
+    var commonjs = gulp.src(['src/kola.ts', 'typings/tsd.d.ts'])
                     .pipe(ts({
                         declarationFiles: true,
-                        module: 'commonjs'
-                    }));
+                        module: 'commonjs',
+                        noExternalResolve: false
+        }));
 
-    var amd = gulp.src('src/kola.ts')
+    var amd = gulp.src(['src/kola.ts', 'typings/tsd.d.ts'])
                     .pipe(ts({
-                        module: 'amd'
+                        module: 'amd',
+                        noExternalResolve: false
                     }));
 
     return merge([
-        gulp.src(['package.json','README.md','LICENSE'])
-            .pipe(gulp.dest(RELEASE_DIR)),
         commonjs.dts
-            .pipe(gulp.dest(RELEASE_DIR))
             .pipe(replace(/declare\s/g, ''))
-            .pipe(insert.wrap('declare module \"'+ pkg.name +'\" {\n', '\n}')),
+            .pipe(insert.wrap('declare module \"'+ pkg.name +'\" {\n', '\n}'))
+            .pipe(gulp.dest('dist')),
         commonjs.js
-            .pipe(gulp.dest(RELEASE_DIR)),
+            .pipe(gulp.dest('dist')),
         amd.js
-            .pipe(gulp.dest(RELEASE_DIR + '/amd'))
+            .pipe(gulp.dest('dist/amd'))
     ])
 })
