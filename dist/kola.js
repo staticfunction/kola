@@ -94,26 +94,29 @@ var KontextImpl = (function () {
 exports.KontextImpl = KontextImpl;
 var App = (function () {
     function App(parent) {
-        if (parent) {
-            this.kontext = new KontextImpl(parent.kontext);
+        this.parent = parent;
+        if (this.parent) {
+            this.kontext = new KontextImpl(this.parent.kontext);
         }
         else
             this.kontext = new KontextImpl();
-        this.parent = parent;
-        this.onKontext(this.kontext);
-        this.onStart = new signals.SignalDispatcher();
-        this.onStop = new signals.SignalDispatcher();
     }
-    App.prototype.onKontext = function (kontext) {
+    App.prototype.onKontext = function (kontext, opts) {
     };
     App.prototype.start = function (opts) {
+        this.startupOptions = opts;
+        this.onKontext(this.kontext, opts);
         this.kontext.start();
-        this.onStart.dispatch(opts);
+        this.onStart();
         return this;
+    };
+    App.prototype.onStart = function () {
+    };
+    App.prototype.onStop = function () {
     };
     App.prototype.stop = function () {
         this.kontext.stop();
-        this.onStop.dispatch(null);
+        this.onStop();
         return this;
     };
     return App;
