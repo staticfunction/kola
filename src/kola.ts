@@ -163,12 +163,12 @@ export class App<T> {
             this.kontext = new KontextImpl();
     }
 
-    onKontext(kontext: Kontext, opts?: T): void {
+    initialize(kontext: Kontext, opts?: T): void {
     }
 
     start(opts?: T): App<T> {
         this.startupOptions = opts;
-        this.onKontext(this.kontext, opts);
+        this.initialize(this.kontext, opts);
         this.kontext.start();
         this.onStart();
         return this;
