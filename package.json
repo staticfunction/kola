@@ -1,19 +1,23 @@
 {
   "name": "kola",
-  "version": "0.1.0-rc2",
+  "version": "0.1.0-rc3",
   "description": "global dependency manager",
   "main": "dist/kola.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "gulp test"
   },
   "author": {
     "name": "James Roland Cabresos",
     "email": "jamesroland@dwimmyfactory.com",
     "url": "http://github.com/staticfunction"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/staticfunction/kola"
+  },
   "license": "MIT",
   "dependencies": {
-    "kola-signals": ">=0.0.1"
+    "kola-signals": "^0.1.1"
   },
   "devDependencies": {
     "del": "^1.1.1",
@@ -23,7 +27,7 @@
     "gulp-mocha": "^0.5.1",
     "gulp-replace": "^0.5.3",
     "gulp-typescript": "^2.4.2",
-    "kola-hooks": "0.0.1",
+    "kola-hooks": "0.0.5",
     "merge2": "^0.3.1",
     "mocha": "^1.20.1",
     "should": "^4.0.4",
