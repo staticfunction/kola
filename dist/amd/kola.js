@@ -19,19 +19,18 @@ define(["require", "exports", 'kola-signals'], function (require, exports, signa
             this.kontext = kontext;
             this.signal = signal;
             this.hook = hook;
-            this.listener = new signals.SignalListener(this.onDispatch, this);
         }
         SignalHook.prototype.onDispatch = function (payload) {
             this.hook.execute(payload, this.kontext);
         };
         SignalHook.prototype.attach = function () {
-            this.signal.addListener(this.listener);
+            this.listener = this.signal.listen(this.onDispatch, this, this.callOnce);
         };
         SignalHook.prototype.dettach = function () {
-            this.signal.removeListener(this.listener);
+            this.listener.unlisten();
         };
         SignalHook.prototype.runOnce = function () {
-            this.listener = new signals.SignalListener(this.onDispatch, this, true);
+            this.callOnce = true;
         };
         return SignalHook;
     })();
@@ -49,7 +48,7 @@ define(["require", "exports", 'kola-signals'], function (require, exports, signa
         KontextImpl.prototype.setSignal = function (name, hook) {
             var signal = this.getSignal(name);
             if (!signal)
-                signal = this.signals[name] = new signals.SignalDispatcher();
+                signal = this.signals[name] = new signals.Dispatcher();
             var sigHook;
             if (hook) {
                 sigHook = new SignalHook(this, signal, hook);
