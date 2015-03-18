@@ -151,7 +151,7 @@ export class App<T> {
 
     parent: App<any>;
     kontext: Kontext;
-    startupOptions: T;
+    opts: T;
 
     constructor(parent?: App<any>) {
         this.parent = parent;
@@ -167,7 +167,7 @@ export class App<T> {
     }
 
     start(opts?: T): App<T> {
-        this.startupOptions = opts;
+        this.opts = opts;
         this.initialize(this.kontext, opts);
         this.kontext.start();
         this.onStart();
