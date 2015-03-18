@@ -52,9 +52,9 @@ export class KontextImpl implements Kontext {
 export class App<T> {
     parent: App<any>;
     kontext: Kontext;
-    startupOptions: T;
+    opts: T;
     constructor(parent?: App<any>);
-    onKontext(kontext: Kontext, opts?: T): void;
+    initialize(kontext: Kontext, opts?: T): void;
     start(opts?: T): App<T>;
     onStart(): void;
     onStop(): void;
