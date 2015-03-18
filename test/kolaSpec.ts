@@ -49,7 +49,7 @@ describe('App', () => {
 
 interface Kontext extends kola.Kontext {
     setSignal<T>(name: string, hook?: kola.Hook<T>): kola.SignalHook<T>;
-    getSignal<T>(name: string): signals.SignalDispatcher<T>;
+    getSignal<T>(name: string): signals.Dispatcher<T>;
     setInstance<T>(name: string, factory: () => T): kola.KontextFactory<T>;
     getInstance<T>(name: string): T;
     getInstance(name: 'models.phonebook'): Phonebook;
@@ -252,7 +252,7 @@ describe('KontextImpl', () => {
 
     it('child kontext will never receive updates from parent', () => {
         var signalListener = sinon.spy();
-        childKontext.getSignal('signals.hello').addListener(new signals.SignalListener(signalListener, null, true));
+        childKontext.getSignal('signals.hello').listen(signalListener, null, true);
     });
 
 });

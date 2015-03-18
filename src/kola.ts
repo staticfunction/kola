@@ -30,17 +30,16 @@ export interface Hook<T> {
 export class SignalHook<T> {
 
     kontext: Kontext;
-    signal: signals.SignalDispatcher<T>;
+    signal: signals.Dispatcher<T>;
     hook: Hook<T>;
+    callOnce: boolean;
 
-    private listener: signals.SignalListener<T>;
+    private listener: signals.Listener<T>;
 
-    constructor( kontext: Kontext, signal: signals.SignalDispatcher<T>, hook: Hook<T>) {
+    constructor( kontext: Kontext, signal: signals.Dispatcher<T>, hook: Hook<T>) {
         this.kontext = kontext;
         this.signal = signal;
         this.hook = hook;
-
-        this.listener = new signals.SignalListener(this.onDispatch, this);
     }
 
     onDispatch(payload: T): void {
@@ -48,15 +47,15 @@ export class SignalHook<T> {
     }
 
     attach(): void {
-        this.signal.addListener(this.listener);
+        this.listener = this.signal.listen(this.onDispatch, this, this.callOnce);
     }
 
     dettach(): void {
-        this.signal.removeListener(this.listener);
+        this.listener.unlisten();
     }
 
     runOnce(): void {
-        this.listener = new signals.SignalListener(this.onDispatch, this, true);
+        this.callOnce = true;
     }
 }
 
@@ -64,7 +63,7 @@ export interface Kontext {
     parent: Kontext;
     hasSignal(name: string): boolean;
     setSignal<T>(name: string, hook?: Hook<T>): SignalHook<T>;
-    getSignal<T>(name: string): signals.SignalDispatcher<T>;
+    getSignal<T>(name: string): signals.Dispatcher<T>;
     setInstance<T>(name: string, factory: () => T): KontextFactory<T>;
     getInstance<T>(name: string): T;
     start(): void;
@@ -75,7 +74,7 @@ export class KontextImpl implements Kontext {
 
     parent: Kontext;
 
-    private signals: {[s: string]: signals.SignalDispatcher<any>};
+    private signals: {[s: string]: signals.Dispatcher<any>};
     private signalHooks: SignalHook<any>[];
     private instances: {[s: string]: KontextFactory<any>};
 
@@ -94,7 +93,7 @@ export class KontextImpl implements Kontext {
         var signal = this.getSignal<T>(name);
 
         if(!signal)
-            signal = this.signals[name] = new signals.SignalDispatcher();
+            signal = this.signals[name] = new signals.Dispatcher();
 
         var sigHook;
 
@@ -106,7 +105,7 @@ export class KontextImpl implements Kontext {
         return sigHook;
     }
 
-    getSignal<T>(name: string): signals.SignalDispatcher<T> {
+    getSignal<T>(name: string): signals.Dispatcher<T> {
         var signal = this.signals[name];
 
         if(this.parent && !signal) {
