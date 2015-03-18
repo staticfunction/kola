@@ -15,10 +15,11 @@ export interface Hook<T> {
 }
 export class SignalHook<T> {
     kontext: Kontext;
-    signal: signals.SignalDispatcher<T>;
+    signal: signals.Dispatcher<T>;
     hook: Hook<T>;
+    callOnce: boolean;
     private listener;
-    constructor(kontext: Kontext, signal: signals.SignalDispatcher<T>, hook: Hook<T>);
+    constructor(kontext: Kontext, signal: signals.Dispatcher<T>, hook: Hook<T>);
     onDispatch(payload: T): void;
     attach(): void;
     dettach(): void;
@@ -28,7 +29,7 @@ export interface Kontext {
     parent: Kontext;
     hasSignal(name: string): boolean;
     setSignal<T>(name: string, hook?: Hook<T>): SignalHook<T>;
-    getSignal<T>(name: string): signals.SignalDispatcher<T>;
+    getSignal<T>(name: string): signals.Dispatcher<T>;
     setInstance<T>(name: string, factory: () => T): KontextFactory<T>;
     getInstance<T>(name: string): T;
     start(): void;
@@ -42,7 +43,7 @@ export class KontextImpl implements Kontext {
     constructor(parent?: Kontext);
     hasSignal(name: string): boolean;
     setSignal<T>(name: string, hook?: Hook<T>): SignalHook<T>;
-    getSignal<T>(name: string): signals.SignalDispatcher<T>;
+    getSignal<T>(name: string): signals.Dispatcher<T>;
     setInstance<T>(name: string, factory: () => T): KontextFactory<T>;
     getInstance<T>(name: string): T;
     start(): void;
