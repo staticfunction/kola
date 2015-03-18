@@ -97,11 +97,11 @@ define(["require", "exports", 'kola-signals'], function (require, exports, signa
             else
                 this.kontext = new KontextImpl();
         }
-        App.prototype.onKontext = function (kontext, opts) {
+        App.prototype.initialize = function (kontext, opts) {
         };
         App.prototype.start = function (opts) {
-            this.startupOptions = opts;
-            this.onKontext(this.kontext, opts);
+            this.opts = opts;
+            this.initialize(this.kontext, opts);
             this.kontext.start();
             this.onStart();
             return this;
