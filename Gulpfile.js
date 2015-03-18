@@ -2,7 +2,6 @@
  * Created by staticfunction on 8/27/14.
  */
 var gulp = require('gulp');
-var dts = require('dts-bundle');
 var ts = require('gulp-typescript');
 var mocha = require('gulp-mocha');
 var replace = require('gulp-replace');
