@@ -1,7 +1,7 @@
 {
   "name": "kola",
-  "version": "0.1.0-rc3",
-  "description": "global dependency manager",
+  "version": "0.1.0-rc4",
+  "description": "Contextual object wiring framework",
   "main": "dist/kola.js",
   "scripts": {
     "test": "gulp test"
