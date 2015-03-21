@@ -62,8 +62,8 @@ export class SignalHook<T> {
 export interface Kontext {
     parent: Kontext;
     hasSignal(name: string): boolean;
-    setSignal<T>(name: string, hook?: Hook<T>): SignalHook<T>;
-    getSignal<T>(name: string): signals.Dispatcher<T>;
+    setSignal<T>(name: string, hook?: Hook<T>, local?: boolean): SignalHook<T>;
+    getSignal<T>(name: string, local?: boolean): signals.Dispatcher<T>;
     setInstance<T>(name: string, factory: () => T): KontextFactory<T>;
     getInstance<T>(name: string): T;
     start(): void;
@@ -89,8 +89,8 @@ export class KontextImpl implements Kontext {
         return this.signals[name] != null;
     }
 
-    setSignal<T>(name: string, hook?: Hook<T>): SignalHook<T> {
-        var signal = this.getSignal<T>(name);
+    setSignal<T>(name: string, hook?: Hook<T>, local?: boolean): SignalHook<T> {
+        var signal = this.getSignal<T>(name, local);
 
         if(!signal)
             signal = this.signals[name] = new signals.Dispatcher();
@@ -105,8 +105,11 @@ export class KontextImpl implements Kontext {
         return sigHook;
     }
 
-    getSignal<T>(name: string): signals.Dispatcher<T> {
+    getSignal<T>(name: string, local?: boolean): signals.Dispatcher<T> {
         var signal = this.signals[name];
+
+        if(local)
+            return signal;
 
         if(this.parent && !signal) {
             signal = this.parent.getSignal(name);

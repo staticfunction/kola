@@ -48,8 +48,8 @@ describe('App', () => {
 })
 
 interface Kontext extends kola.Kontext {
-    setSignal<T>(name: string, hook?: kola.Hook<T>): kola.SignalHook<T>;
-    getSignal<T>(name: string): signals.Dispatcher<T>;
+    setSignal<T>(name: string, hook?: kola.Hook<T>, local?: boolean): kola.SignalHook<T>;
+    getSignal<T>(name: string, local?: boolean): signals.Dispatcher<T>;
     setInstance<T>(name: string, factory: () => T): kola.KontextFactory<T>;
     getInstance<T>(name: string): T;
     getInstance(name: 'models.phonebook'): Phonebook;
@@ -186,6 +186,12 @@ describe('KontextImpl', () => {
             parentKontext.setSignal<string>('signals.hello', hooks.executes([SayHello]));
         }, 'error setting up signals.hello');
     });
+
+    it('sets a local signal', () => {
+        should.doesNotThrow(() => {
+            childKontext.setSignal<string>('signals.hello', hooks.executes([SayHello]), true);
+        })
+    })
 
     it('sets an getInstance', () => {
         should.doesNotThrow( () => {

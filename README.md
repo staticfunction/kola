@@ -98,3 +98,17 @@ application starts.
 
 ## App.onStop(): void
 This is called when App.stop() is called. This method is meant to be overridden to do custom behaviour when application stops.
+
+## Multiple Apps & Kontext
+Everytime you create an app, a Kontext is created for you. You can choose either to extend another App's Kontext or created
+an independent one like so:
+
+```typescript
+
+var parentApp = new parent.App(); //completely standalone
+
+var childApp = new child.App(parentApp); //extends parentApp's kontext
+
+```
+
+If you extend an App's Kontext, it's instances and signals will be inherited.
