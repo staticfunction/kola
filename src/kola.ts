@@ -130,6 +130,8 @@ export class KontextImpl implements Kontext {
 
         if(this.parent)
             return this.parent.getInstance<T>(name);
+
+        return null;
     }
 
     start(): void {
