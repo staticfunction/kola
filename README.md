@@ -8,7 +8,7 @@
 
 ### App
 Everything is an app in kola. To create an app, you extend kola.App and define your application's startup paramater type.
-Here we have a Greeter that accepts a message of type string on start(note the generic param).
+Here we have a MailingList App that will accept any object that has a property *host* of type *string*
 
 ```typescript
 
