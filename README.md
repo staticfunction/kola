@@ -4,7 +4,7 @@
     npm install kola --save
 ```
 
-## Getting Started
+# Getting Started
 
 ### App
 Everything is an app in kola. To create an app, you extend kola.App and define your application's startup paramater type.
@@ -98,3 +98,35 @@ application starts.
 
 ## App.onStop(): void
 This is called when App.stop() is called. This method is meant to be overridden to do custom behaviour when application stops.
+
+# Multiple App and Kontext
+When creating a kola App, you can choose whether to extend another App or a standalone. By extending another App you get
+to inherit all its Kontext instances and signals.
+
+```typescript
+import parent = require('./parent/app');
+import child = require('./child/app');
+
+var parentApp = new parent.App();
+var childApp = new child.App(parentApp); //this enables us to inherit instances and signals from parent.
+
+```
+
+## Kontext.setInstance() on a child App
+When you set an instance in a child App, that instance will only be available to that child. Even if you try to set it with a
+key that has the same name in the parent.
+
+## Kontext.getInstance() from a child App
+As everything is inherited from the parent, getting an instance with a key that was define in the parent will return you
+an instance from that parent. The logic when getting an instance is that it would check first locally if a factory is define for
+that instance otherwise it would check its parent. If you have a deep hierarchy of apps, the check will be perform recursively until
+it finds the factory or until it reached its root parent.
+
+
+## Kontext.setSignal() on a child App
+Setting a signal works differently from setting an instance. When you set a signal, it checks first if that signal is already
+defined in the current Kontext and if you have a hierarchy of apps, it will recursively look for that signal until it reaches the root. When
+it finds one, it will Kontext will create a SignalHook for that signal. Otherwise a new signal instance is created for the current Kontext.
+
+## Kontext.getSignal() on a child App
+Same as getInstance, you'll be able to inherit signals from parent.
