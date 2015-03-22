@@ -74,6 +74,7 @@ define(["require", "exports", 'kola-signals'], function (require, exports, signa
                 return factory.getInstance();
             if (this.parent)
                 return this.parent.getInstance(name);
+            return null;
         };
         KontextImpl.prototype.start = function () {
             for (var i = 0; i < this.signalHooks.length; i++) {
