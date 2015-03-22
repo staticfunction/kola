@@ -55,7 +55,7 @@ The Kontext is where you can store instances and signals for your application.
 
 ### Kontext.setSignal(name: string, hook: Hook<T>): SignalHook<T>
 Kontext.setSignal() allows you to define a signal name and a hook which is any object that implements Hook<T>. This will
-return a SignalHook<T> instance whereyou can define if this hook should only run once.
+return a SignalHook<T> instance where you can define if this hook should only run once.
 
 ```typescript
     kontext.setSignal<any>('initialize', {
