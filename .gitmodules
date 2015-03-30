@@ -1,0 +1,3 @@
+[submodule "examples/kola-starter"]
+	path = examples/kola-starter
+	url = https://github.com/staticfunction/kola-starter.git

@@ -1,5 +1,6 @@
 .idea
 src
+examples
 typings
 build
 test
