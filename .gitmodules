@@ -1,3 +1,6 @@
 [submodule "examples/kola-starter"]
 	path = examples/kola-starter
 	url = https://github.com/staticfunction/kola-starter.git
+[submodule "examples/kola-todomvc"]
+	path = examples/kola-todomvc
+	url = https://github.com/staticfunction/kola-todomvc
