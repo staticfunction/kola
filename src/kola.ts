@@ -153,6 +153,7 @@ export class App<T> {
 
     parent: App<any>;
     kontext: Kontext;
+    initialized: boolean;
     opts: T;
 
     constructor(parent?: App<any>) {
@@ -170,7 +171,10 @@ export class App<T> {
 
     start(opts?: T): App<T> {
         this.opts = opts;
-        this.initialize(this.kontext, opts);
+        
+        if(!this.initialized)
+            this.initialize(this.kontext, opts);
+        
         this.kontext.start();
         this.onStart();
         return this;
@@ -188,6 +192,16 @@ export class App<T> {
         this.kontext.stop();
         this.onStop();
         return this;
+    }
+}
+
+export function signal() {
+
+}
+
+export function instance(value:string) {
+    return function(target) {
+
     }
 }
 

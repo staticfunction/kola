@@ -102,7 +102,8 @@ define(["require", "exports", 'kola-signals'], function (require, exports, signa
         };
         App.prototype.start = function (opts) {
             this.opts = opts;
-            this.initialize(this.kontext, opts);
+            if (!this.initialized)
+                this.initialize(this.kontext, opts);
             this.kontext.start();
             this.onStart();
             return this;
@@ -119,4 +120,12 @@ define(["require", "exports", 'kola-signals'], function (require, exports, signa
         return App;
     })();
     exports.App = App;
+    function signal() {
+    }
+    exports.signal = signal;
+    function instance(value) {
+        return function (target) {
+        };
+    }
+    exports.instance = instance;
 });

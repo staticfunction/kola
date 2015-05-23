@@ -52,6 +52,7 @@ export class KontextImpl implements Kontext {
 export class App<T> {
     parent: App<any>;
     kontext: Kontext;
+    initialized: boolean;
     opts: T;
     constructor(parent?: App<any>);
     initialize(kontext: Kontext, opts?: T): void;
@@ -60,5 +61,7 @@ export class App<T> {
     onStop(): void;
     stop(): App<T>;
 }
+export function signal(): void;
+export function instance(value: string): (target: any) => void;
 
 }
