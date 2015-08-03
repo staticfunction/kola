@@ -4,7 +4,11 @@
   "description": "Contextual object wiring framework",
   "main": "dist/kola.js",
   "scripts": {
-    "test": "gulp test"
+    "build": "$(npm bin)/tsc src/**.ts reference.d.ts --experimentalDecorators --module commonjs --target es5 --outDir target/build",
+     "build:watch": "npm run build -- --watch",
+     "test": "$(npm bin)/mocha target/build/**/*Spec.js",
+    "test:watch": "npm run test -- --watch",
+    "auto": "parallelshell 'npm run build:watch' 'npm run test:watch'"   
   },
   "author": {
     "name": "James Roland Cabresos",
