@@ -8,6 +8,6 @@ export interface RequestPromise {
   then(success: (res:any) => void, error: (err:any) => void): void;
 }
 
-export function request(name: string, handlers?: Function[]) {
+export function request<T>(name: string, handlers?: Function[] | {new(): T}) {
 
 }

@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es5",
+        "experimentalDecorators": true,
+        "outDir": ".build"
+    },
+    "filesGlob": [
+        "src/**.ts",
+        "reference.d.ts"
+    ],
+    "files": [
+        "src/app.ts",
+        "src/appSpec.ts",
+        "src/kola.ts",
+        "src/request.ts",
+        "src/requestSpec.ts",
+        "reference.d.ts"
+    ]
+}
