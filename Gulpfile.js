@@ -12,33 +12,33 @@ var merge = require('merge2');
 var filter = require('gulp-filter');
 
 var tsProject = ts.createProject({
-    declarationFiles: false,
-    module: 'commonjs'
-})
-
-var srcOutOnly = filter(['*', '!**Spec.*']);
-var testOutOnly = filter(['**Spec.*']);
-
-gulp.task("compile", ['clean'], function() {
-    var commonjs = gulp.src(['src/kola.ts', 'test/**Spec.ts', 'typings/tsd.d.ts'])
-                        .pipe(ts(tsProject));
-
-    return commonjs.js
-        .pipe(srcOutOnly)
-        .pipe(gulp.dest('build/src'))
-        .pipe(srcOutOnly.restore())
-        .pipe(testOutOnly)
-        .pipe(gulp.dest('build/test'))
-});
-
-gulp.task('test', ['compile'], function() {
-    return gulp.src('build/test/**/*.js', {read: false})
-        .pipe(mocha({reporter: 'nyan'}));
+    "declaration": true,
+    "module": "commonjs"   
 });
 
 gulp.task('clean', function(cb) {
-    del(['build'], cb);
+    del(['.build'], cb);
 })
+
+gulp.task('build', function() {
+    var result = gulp.src(['src/**/*.ts', 'typings/tsd.d.ts'])
+                    .pipe(ts(tsProject));
+    
+    return merge([
+        result.js.pipe(gulp.dest('.build')),
+        result.dts.pipe(gulp.dest('.build'))
+    ])
+});
+
+gulp.task('test', ['build'], function() {
+    return gulp.src('.build/**/*Spec.js', {read: false})
+                .pipe(mocha({reporter: 'nyan'}));
+})
+
+gulp.task('dev', ['clean', 'build', 'test'], function() {
+    gulp.watch(['src/**/*.ts', 'typings/tsd.d.ts'], ['build', 'test']);
+})
+
 
 gulp.task('clean-release', function(cb) {
     del(['dist'], cb);
