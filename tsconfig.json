@@ -2,21 +2,13 @@
     "compilerOptions": {
         "module": "commonjs",
         "target": "es5",
-        "experimentalDecorators": true,
-        "outDir": ".build"
+        "experimentalDecorators": true
     },
-    "filesGlob": [
-        "src/**.ts",
-        "typings/tsd.d.ts"
-    ],
-    "files": [
-        "src/app.ts",
-        "src/appSpec.ts",
-        "src/kola.ts",
-        "src/kontext.ts",
-        "src/kontextSpec.ts",
-        "src/request.ts",
-        "src/requestSpec.ts",
-        "typings/tsd.d.ts"
+    "exclude": [
+        "node_modules",
+        ".build",
+        "examples",
+        "dist",
+        "test"
     ]
 }
